@@ -211,14 +211,6 @@ export const certifications = [
     image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=600&h=400&fit=crop",
   },
   {
-    id: 8,
-    title: "TypeScript Advanced",
-    issuer: "DevSkills Pro",
-    issuedDate: "February 2025",
-    credentialId: "TS-2025-11111",
-    image: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=600&h=400&fit=crop",
-  },
-  {
     id: 7,
     title: "Docker & Kubernetes",
     issuer: "CloudTech University",

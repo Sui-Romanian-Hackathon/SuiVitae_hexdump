@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useHiddenCertificates } from '@/hooks/useHiddenCertificates';
 import { toast } from 'sonner';
 import { useCertificatePDF } from '@/hooks/useCertificatePDF';
-import { WALRUS_AGGREGATOR } from '@/constants';
+import { WALRUS_AGGREGATOR, NETWORK } from '@/constants';
 
 interface CertificateModalProps {
   certificate: Certificate | null;
@@ -50,7 +50,7 @@ export const CertificateModal = ({ certificate, onClose }: CertificateModalProps
 
     setIsDownloading(true);
     try {
-      // Download and detect file type
+      // Exact same logic as main project "Check on Walrus" button
       const response = await fetch(`${WALRUS_AGGREGATOR}/v1/blobs/${certificate.blobId}`, {
         method: 'GET',
         headers: {
@@ -64,46 +64,27 @@ export const CertificateModal = ({ certificate, onClose }: CertificateModalProps
         const link = document.createElement('a');
         link.href = url;
         
-        // Detect file type (same logic as main project)
-        const contentType = response.headers.get('content-type') || '';
-        const contentTypeLower = contentType.toLowerCase();
-        const blobTypeLower = (blob.type || '').toLowerCase();
+        // Same detection logic as main project
+        // Main project uses: blob.type.includes('image') ? 'jpg' : 'pdf'
+        const extension = blob.type.includes('image') ? 'jpg' : 'pdf';
+        const fileTypeLabel = blob.type.includes('image') ? 'Image' : 'PDF';
         
-        let extension = 'pdf';
-        let fileTypeLabel = 'File';
-        
-        if (contentTypeLower.includes('pdf') || blobTypeLower.includes('pdf')) {
-          extension = 'pdf';
-          fileTypeLabel = 'PDF';
-        } else if (contentTypeLower.includes('jpeg') || contentTypeLower.includes('jpg') || 
-                   blobTypeLower.includes('jpeg') || blobTypeLower.includes('jpg')) {
-          extension = 'jpg';
-          fileTypeLabel = 'Image';
-        } else if (contentTypeLower.includes('png') || blobTypeLower.includes('png')) {
-          extension = 'png';
-          fileTypeLabel = 'Image';
-        } else if (contentTypeLower.includes('image')) {
-          extension = 'jpg';
-          fileTypeLabel = 'Image';
-        }
-        
-        link.download = `${certificate.title.replace(/\s+/g, '_')}_certificate.${extension}`;
+        // Same naming as main project (with _walrus suffix)
+        link.download = `${certificate.title.replace(/\s+/g, '_')}_walrus.${extension}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         
-        toast.success('Certificate downloaded', {
+        toast.success('File downloaded from Walrus', {
           description: `${fileTypeLabel} downloaded successfully.`,
         });
       } else {
-        throw new Error(`Failed to fetch: ${response.status}`);
+        toast.error(`Failed to fetch from Walrus: ${response.status}`);
       }
     } catch (error) {
-      console.error('Error downloading certificate:', error);
-      toast.error('Failed to download certificate', {
-        description: 'Please try again later.',
-      });
+      console.error('Error downloading from Walrus:', error);
+      toast.error('Failed to download file from Walrus');
     } finally {
       setIsDownloading(false);
     }
@@ -115,6 +96,12 @@ export const CertificateModal = ({ certificate, onClose }: CertificateModalProps
     navigator.clipboard.writeText(certificate.id);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleViewOnExplorer = () => {
+    // Open SuiVision Explorer for the object
+    const explorerUrl = `https://testnet.suivision.xyz/object/${certificate.id}`;
+    window.open(explorerUrl, '_blank');
   };
 
   return (
@@ -262,6 +249,7 @@ export const CertificateModal = ({ certificate, onClose }: CertificateModalProps
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={handleViewOnExplorer}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl glass-subtle text-foreground font-medium text-sm hover:bg-white/50 transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />

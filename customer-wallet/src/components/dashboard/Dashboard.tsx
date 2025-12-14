@@ -1,12 +1,10 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useMyCertificates } from '@/hooks/useMyCertificates';
 import { CredentialCard } from './CredentialCard';
 import { CertificateModal } from './CertificateModal';
 import { useState, useMemo } from 'react';
 import type { Certificate } from '@/hooks/useMyCertificates';
-import { Award, TrendingUp, Sparkles, EyeOff } from 'lucide-react';
-import { useHiddenCertificates } from '@/hooks/useHiddenCertificates';
-import { useCertificatesWithPDF } from '@/hooks/useCertificatesWithPDF';
+import { Award, TrendingUp, Sparkles } from 'lucide-react';
 
 interface DashboardProps {
   activeTab: string;
@@ -15,68 +13,30 @@ interface DashboardProps {
 
 export const Dashboard = ({ activeTab, walletAddress }: DashboardProps) => {
   const { certificates, isLoading } = useMyCertificates(walletAddress);
-  const { hiddenIds, hiddenIdsArray, isHidden } = useHiddenCertificates();
-  const certificatesWithPDF = useCertificatesWithPDF(certificates);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
 
   const filteredCertificates = useMemo(() => {
-    // Filter to only show certificates with files on Walrus (any type)
-    let certificatesWithFiles = certificates.filter(c => 
-      c.blobId && certificatesWithPDF.has(c.id)
-    );
-
-    // For hidden tab, show only hidden certificates
-    if (activeTab === 'hidden') {
-      return certificatesWithFiles.filter(c => hiddenIds.has(c.id));
-    }
-
-    // For all other tabs, exclude hidden certificates
-    const visibleCertificates = certificatesWithFiles.filter(c => !hiddenIds.has(c.id));
-
     switch (activeTab) {
       case 'recent':
-        return [...visibleCertificates].sort((a, b) => 
+        return [...certificates].sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         ).slice(0, 3);
       case 'verified':
-        return visibleCertificates.filter(c => c.status === 'verified');
+        return certificates.filter(c => c.status === 'verified');
       case 'favorites':
         return [];
       default:
-        return visibleCertificates;
+        return certificates;
     }
-  }, [certificates, activeTab, hiddenIdsArray, certificatesWithPDF]);
+  }, [certificates, activeTab]);
 
-  // Only count certificates with PDFs
-  const visibleCertificates = useMemo(() => 
-    certificates.filter(c => 
-      !hiddenIds.has(c.id) && 
-      c.blobId && 
-      certificatesWithPDF.has(c.id)
-    ),
-    [certificates, hiddenIdsArray, certificatesWithPDF]
-  );
-  
-  const verifiedCount = useMemo(() => 
-    visibleCertificates.filter(c => c.status === 'verified').length,
-    [visibleCertificates]
-  );
-  
-  const hiddenCount = useMemo(() => 
-    certificates.filter(c => 
-      hiddenIds.has(c.id) && 
-      c.blobId && 
-      certificatesWithPDF.has(c.id)
-    ).length,
-    [certificates, hiddenIdsArray, certificatesWithPDF]
-  );
+  const verifiedCount = certificates.filter(c => c.status === 'verified').length;
 
   const getTabTitle = () => {
     switch (activeTab) {
       case 'recent': return 'Recent Credentials';
       case 'verified': return 'Verified Credentials';
       case 'favorites': return 'Favorite Credentials';
-      case 'hidden': return 'Hidden Credentials';
       default: return 'All Credentials';
     }
   };
@@ -99,10 +59,6 @@ export const Dashboard = ({ activeTab, walletAddress }: DashboardProps) => {
         return filteredCertificates.length === 0
           ? 'Star certificates to add them to favorites'
           : 'Your favorite credentials for quick access';
-      case 'hidden':
-        return filteredCertificates.length > 0
-          ? `You have ${hiddenCount} hidden ${hiddenCount === 1 ? 'credential' : 'credentials'}. Click to unhide.`
-          : 'No hidden credentials. Hide certificates from their detail view.';
       default:
         return filteredCertificates.length > 0
           ? 'All your certificates and diplomas stored on the Sui blockchain'
@@ -118,20 +74,20 @@ export const Dashboard = ({ activeTab, walletAddress }: DashboardProps) => {
         transition={{ delay: 0.2 }}
         className="max-w-7xl mx-auto px-6 py-8"
       >
-        {/* Stats - Enhanced glass cards - Same line, responsive */}
-        <div className="flex flex-wrap gap-3 md:gap-4 mb-8">
+        {/* Stats - Enhanced glass cards */}
+        <div className="flex gap-3 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="glass-elevated rounded-2xl p-3 md:p-5 flex items-center gap-2 md:gap-4 flex-1 min-w-[140px] md:min-w-0"
+            className="glass-elevated rounded-xl p-3 flex items-center gap-2 flex-1 min-w-0"
           >
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm border border-primary/20 flex items-center justify-center flex-shrink-0">
-              <Award className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm border border-primary/20 flex items-center justify-center flex-shrink-0">
+              <Award className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-bold text-foreground">{visibleCertificates.length}</p>
-              <p className="text-xs md:text-sm text-muted-foreground truncate">Visible</p>
+              <p className="text-lg font-bold text-foreground">{certificates.length}</p>
+              <p className="text-[10px] text-muted-foreground">Total</p>
             </div>
           </motion.div>
 
@@ -139,36 +95,32 @@ export const Dashboard = ({ activeTab, walletAddress }: DashboardProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="glass-elevated rounded-2xl p-3 md:p-5 flex items-center gap-2 md:gap-4 flex-1 min-w-[140px] md:min-w-0"
+            className="glass-elevated rounded-xl p-3 flex items-center gap-2 flex-1 min-w-0"
           >
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 backdrop-blur-sm border border-green-500/20 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500/20 to-green-500/10 backdrop-blur-sm border border-green-500/20 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-4 h-4 text-green-600" />
             </div>
             <div className="min-w-0">
-              <p className="text-xl md:text-2xl font-bold text-foreground">{verifiedCount}</p>
-              <p className="text-xs md:text-sm text-muted-foreground truncate">Verified</p>
+              <p className="text-lg font-bold text-foreground">{verifiedCount}</p>
+              <p className="text-[10px] text-muted-foreground">Verified</p>
             </div>
           </motion.div>
         </div>
 
-        {/* Section Title - Use AnimatePresence to prevent stacking */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center justify-between mb-6"
-          >
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">{getTabTitle()}</h2>
-              <p className="text-sm text-muted-foreground">
-                {getTabDescription()}
-              </p>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+        {/* Section Title */}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center justify-between mb-6"
+        >
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">{getTabTitle()}</h2>
+            <p className="text-sm text-muted-foreground">
+              {getTabDescription()}
+            </p>
+          </div>
+        </motion.div>
 
         {/* Loading state */}
         {isLoading ? (
@@ -199,34 +151,6 @@ export const Dashboard = ({ activeTab, walletAddress }: DashboardProps) => {
             <h3 className="text-lg font-semibold text-foreground mb-2">No favorites yet</h3>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
               Click the star icon on any credential to add it to your favorites for quick access.
-            </p>
-          </motion.div>
-        ) : activeTab === 'hidden' && filteredCertificates.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-elevated rounded-3xl p-12 text-center"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl glass-subtle flex items-center justify-center">
-              <EyeOff className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No hidden credentials</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Hide certificates from their detail view to organize your credentials. Hidden certificates won't appear in other tabs.
-            </p>
-          </motion.div>
-        ) : filteredCertificates.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-elevated rounded-3xl p-12 text-center"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl glass-subtle flex items-center justify-center">
-              <Award className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No certificates with files found</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Only certificates with files uploaded to Walrus are displayed here. Verify your certificates in the main app to upload files.
             </p>
           </motion.div>
         ) : (

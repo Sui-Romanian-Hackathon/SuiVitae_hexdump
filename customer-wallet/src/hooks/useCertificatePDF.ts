@@ -4,19 +4,13 @@ import type { Certificate } from './useMyCertificates';
 
 /**
  * Hook to check if a certificate has a file on Walrus and fetch it
- * If blobId exists, the file exists on Walrus (it was minted with it)
+ * If blobId exists, file exists on Walrus (it was minted with it)
  */
 export const useCertificatePDF = (certificate: Certificate | null) => {
-  // If blobId exists, file exists on Walrus (no need to verify)
+  // If blobId exists, file exists on Walrus
   const hasFile = useMemo(() => {
     return !!(certificate?.blobId && certificate.blobId.trim() !== '');
   }, [certificate?.blobId]);
-
-  // We'll detect file type when downloading
-  const fileType = useMemo(() => {
-    // Default to 'file', will be detected on download
-    return 'file';
-  }, []);
 
   const downloadFile = async () => {
     if (!certificate?.blobId) {
@@ -24,7 +18,7 @@ export const useCertificatePDF = (certificate: Certificate | null) => {
     }
 
     try {
-      // Same logic as main project - direct fetch from Walrus
+      // Exact same logic as main project "Check on Walrus" button
       const response = await fetch(`${WALRUS_AGGREGATOR}/v1/blobs/${certificate.blobId}`, {
         method: 'GET',
         headers: {
@@ -38,26 +32,12 @@ export const useCertificatePDF = (certificate: Certificate | null) => {
         const link = document.createElement('a');
         link.href = url;
         
-        // Detect file type from content-type or blob type (same as main project)
-        const contentType = response.headers.get('content-type') || '';
-        const contentTypeLower = contentType.toLowerCase();
-        const blobTypeLower = (blob.type || '').toLowerCase();
-        
         // Same detection logic as main project
-        let extension = 'pdf';
-        if (contentTypeLower.includes('pdf') || blobTypeLower.includes('pdf')) {
-          extension = 'pdf';
-        } else if (contentTypeLower.includes('jpeg') || contentTypeLower.includes('jpg') || 
-                   blobTypeLower.includes('jpeg') || blobTypeLower.includes('jpg')) {
-          extension = 'jpg';
-        } else if (contentTypeLower.includes('png') || blobTypeLower.includes('png')) {
-          extension = 'png';
-        } else if (contentTypeLower.includes('image')) {
-          extension = 'jpg'; // Default for images
-        }
+        // Main project uses: blob.type.includes('image') ? 'jpg' : 'pdf'
+        const extension = blob.type.includes('image') ? 'jpg' : 'pdf';
         
-        // Same naming as main project
-        link.download = `${certificate.title.replace(/\s+/g, '_')}_certificate.${extension}`;
+        // Same naming as main project (with _walrus suffix)
+        link.download = `${certificate.title.replace(/\s+/g, '_')}_walrus.${extension}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -75,8 +55,8 @@ export const useCertificatePDF = (certificate: Certificate | null) => {
 
   return {
     hasFile,
-    fileType,
-    isChecking: false, // No checking needed - if blobId exists, file exists
+    fileType: 'file', // Will be detected on download
+    isChecking: false, // No checking needed
     downloadFile,
   };
 };
