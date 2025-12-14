@@ -1,3 +1,4 @@
+0xf97e5a1a051c190b2977b5770746b0b3b723fc6cd870c187200c416d003e81f5
 # Welcome to your Lovable project
 
 ## Project info
